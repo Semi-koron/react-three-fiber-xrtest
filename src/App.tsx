@@ -19,6 +19,7 @@ function App() {
           onClick={() => {
             if (!isVR) {
               setIsVR(true);
+              store.enterVR();
               return;
             }
           }}
