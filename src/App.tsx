@@ -9,37 +9,72 @@ import {
   XROrigin,
 } from "@react-three/xr";
 import { useState, useRef } from "react";
-import { MeshBasicMaterial, MeshStandardMaterial, Vector3 } from "three";
+import { Mesh, MeshBasicMaterial, MeshStandardMaterial, Vector3 } from "three";
 import { Group } from "three";
 
 const store = createXRStore();
 
 function App() {
   const [red, setRed] = useState(false);
-  const [cubePos, setCubePos] = useState<Vector3>(new Vector3(0, 0.5, 0));
+  const [rightGrab, setRightGrab] = useState(false);
   const [isVR, setIsVR] = useState(false);
+  const leftMeshRef = useRef<Mesh>(null);
+  const rightMeshRef = useRef<Mesh>(null);
 
   const Locomotion = () => {
-    const controller = useXRInputSourceState("controller", "left");
+    const leftController = useXRInputSourceState("controller", "left");
+    const rightController = useXRInputSourceState("controller", "right");
     const ref = useRef<Group>(null);
     useFrame((_, _delta) => {
-      if (ref.current == null || controller == null) {
+      if (
+        ref.current == null ||
+        leftController == null ||
+        rightController == null
+      ) {
         return;
       }
-      const squeezeState = controller.gamepad["xr-standard-squeeze"];
-      if (squeezeState == null) {
+      const leftSqueezeState = leftController.gamepad["xr-standard-squeeze"];
+      const rightSqueezeState = rightController.gamepad["xr-standard-squeeze"];
+      if (leftSqueezeState == null || rightSqueezeState == null) {
         return;
       }
-      if (squeezeState.state == "pressed") {
+      if (leftSqueezeState.state == "pressed") {
         setRed(true);
-        // キューブをcontrollerの位置に移動
-        const controllerPos = new Vector3();
-        if (controller.object) {
-          controller.object.getWorldPosition(controllerPos);
-          setCubePos(controllerPos);
+        // キューブをleftControllerの位置に移動
+        const leftControllerPos = new Vector3();
+        if (leftController.object) {
+          leftController.object.getWorldPosition(leftControllerPos);
+          if (leftMeshRef.current) {
+            leftMeshRef.current.position.set(
+              leftControllerPos.x,
+              leftControllerPos.y,
+              leftControllerPos.z
+            );
+          }
+          console.log(leftControllerPos);
         }
       } else {
         setRed(false);
+      }
+      if (rightSqueezeState.state == "pressed") {
+        // キューブをrightControllerの位置に移動
+        const rightControllerPos = new Vector3();
+        if (rightController.object) {
+          rightController.object.getWorldPosition(rightControllerPos);
+          if (rightMeshRef.current) {
+            rightMeshRef.current.position.set(
+              rightControllerPos.x,
+              rightControllerPos.y,
+              rightControllerPos.z
+            );
+          }
+          console.log(rightControllerPos);
+        }
+        setRightGrab(true);
+      } else {
+        if (rightGrab) {
+          setRightGrab(false);
+        }
       }
       return;
     });
@@ -118,14 +153,32 @@ function App() {
             </mesh>
             <mesh
               pointerEventsType={{ deny: "grab" }}
-              position={cubePos}
+              position={[0, 0, 0]}
               scale={[0.25, 0.25, 0.25]}
+              ref={leftMeshRef}
             >
               <boxGeometry />
               <primitive
                 object={
                   new MeshStandardMaterial({
                     color: "yellow",
+                    metalness: 0,
+                    roughness: 0.2,
+                  })
+                }
+              />
+            </mesh>
+            <mesh
+              pointerEventsType={{ deny: "grab" }}
+              position={[0, 0, 0]}
+              scale={[0.25, 0.25, 0.25]}
+              ref={rightMeshRef}
+            >
+              <boxGeometry />
+              <primitive
+                object={
+                  new MeshStandardMaterial({
+                    color: "cyan",
                     metalness: 0,
                     roughness: 0.2,
                   })
