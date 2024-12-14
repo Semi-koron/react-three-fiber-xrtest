@@ -32,7 +32,12 @@ function App() {
       }
       if (squeezeState.state == "pressed") {
         setRed(true);
-        setCubePos(ref.current.position);
+        // キューブをcontrollerの位置に移動
+        const controllerPos = new Vector3();
+        if (controller.object) {
+          controller.object.getWorldPosition(controllerPos);
+        }
+        setCubePos(controllerPos);
       } else {
         setRed(false);
       }
