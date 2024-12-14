@@ -12,8 +12,6 @@ import { useState, useRef } from "react";
 import { Mesh, Vector3 } from "three";
 import { Group } from "three";
 import { Physics, RigidBody } from "@react-three/rapier";
-import { add } from "three/webgpu";
-
 const store = createXRStore();
 
 function App() {
