@@ -9,8 +9,10 @@ import {
   XROrigin,
 } from "@react-three/xr";
 import { useState, useRef } from "react";
-import { Mesh, MeshBasicMaterial, MeshStandardMaterial, Vector3 } from "three";
+import { Mesh, Vector3 } from "three";
 import { Group } from "three";
+import { Physics, RigidBody } from "@react-three/rapier";
+import { add } from "three/webgpu";
 
 const store = createXRStore();
 
@@ -20,65 +22,64 @@ function App() {
   const [isVR, setIsVR] = useState(false);
   const leftMeshRef = useRef<Mesh>(null);
   const rightMeshRef = useRef<Mesh>(null);
-
+  const cubeRef = useRef<any>(null);
+  const arrow = useRef<any>(null);
   const Locomotion = () => {
     const leftController = useXRInputSourceState("controller", "left");
     const rightController = useXRInputSourceState("controller", "right");
     const ref = useRef<Group>(null);
-    useFrame((_, _delta) => {
-      if (
-        ref.current == null ||
-        leftController == null ||
-        rightController == null
-      ) {
-        return;
-      }
+    useFrame(() => {
+      if (!ref.current || !leftController || !rightController) return;
+
       const leftSqueezeState = leftController.gamepad["xr-standard-squeeze"];
       const rightSqueezeState = rightController.gamepad["xr-standard-squeeze"];
-      if (leftSqueezeState == null || rightSqueezeState == null) {
-        return;
-      }
-      if (leftSqueezeState.state == "pressed") {
+      if (!leftSqueezeState || !rightSqueezeState) return;
+
+      if (leftSqueezeState.state === "pressed") {
         setRed(true);
-        // キューブをleftControllerの位置に移動
         const leftControllerPos = new Vector3();
-        if (leftController.object) {
-          leftController.object.getWorldPosition(leftControllerPos);
-          if (leftMeshRef.current) {
-            leftMeshRef.current.position.set(
-              leftControllerPos.x,
-              leftControllerPos.y,
-              leftControllerPos.z
-            );
-          }
-          console.log(leftControllerPos);
+        leftController.object?.getWorldPosition(leftControllerPos);
+        if (leftMeshRef.current) {
+          leftMeshRef.current.position.copy(leftControllerPos);
         }
       } else {
         setRed(false);
       }
-      if (rightSqueezeState.state == "pressed") {
-        // キューブをrightControllerの位置に移動
+
+      if (rightSqueezeState.state === "pressed") {
         const rightControllerPos = new Vector3();
-        if (rightController.object) {
-          rightController.object.getWorldPosition(rightControllerPos);
-          if (rightMeshRef.current) {
-            rightMeshRef.current.position.set(
-              rightControllerPos.x,
-              rightControllerPos.y,
-              rightControllerPos.z
-            );
-          }
-          console.log(rightControllerPos);
+        rightController.object?.getWorldPosition(rightControllerPos);
+        if (rightMeshRef.current) {
+          rightMeshRef.current.position.copy(rightControllerPos);
         }
         setRightGrab(true);
       } else {
         if (rightGrab) {
+          throwArrow();
           setRightGrab(false);
         }
       }
-      return;
     });
     return <XROrigin ref={ref} />;
+  };
+
+  const throwArrow = () => {
+    addForce();
+    if (!leftMeshRef.current || !rightMeshRef.current || !arrow.current) return;
+    //leftMeshRefのpositionをに移動
+    const leftPos = new Vector3();
+    leftMeshRef.current.getWorldPosition(leftPos);
+    //rightMeshRefのpositionからleftMeshRefのpositionを引いて、normalizeして、それをarrowのvelocityにする
+    const velocity = new Vector3();
+    velocity.subVectors(
+      rightMeshRef.current.position,
+      leftMeshRef.current.position
+    );
+  };
+
+  const addForce = () => {
+    console.log("throwArrow");
+    arrow.current.applyImpulse({ x: 1, y: 1, z: 1 });
   };
 
   return (
@@ -89,109 +90,75 @@ function App() {
             if (!isVR) {
               setIsVR(true);
               store.enterVR();
-              return;
             }
           }}
         >
           Enter VR
         </button>
+        <button onClick={addForce}>test</button>
         <Canvas style={{ height: "100vh" }}>
           {!isVR && <OrbitControls />}
           <XR store={store}>
-            {/* 太陽光を描画 */}
-            <directionalLight position={[100, 60, 100]} intensity={15} />
-            <mesh
-              pointerEventsType={{ deny: "grab" }}
-              onClick={() => setRed(!red)}
-              position={[0, 0.5, -0]}
-              scale={[0.5, 0.5, 0.5]}
-            >
-              <boxGeometry />
-              <primitive
-                object={
-                  new MeshStandardMaterial({
-                    color: red ? "red" : "blue",
-                    metalness: 0,
-                    roughness: 0.2,
-                  })
-                }
-              />
-            </mesh>
-            {/* 地面を作成 */}
-            <mesh
-              pointerEventsType={{ deny: "grab" }}
-              position={[0, 0, 0]}
-              scale={[1000, 0.1, 1000]}
-            >
-              <boxGeometry />
-              <primitive
-                object={
-                  new MeshStandardMaterial({
-                    color: "green",
-                    metalness: 0,
-                    roughness: 1,
-                  })
-                }
-              />
-            </mesh>
-            {/* 半透明な球 */}
-            <mesh
-              pointerEventsType={{ deny: "grab" }}
-              position={[0, 0, 0]}
-              scale={[3, 3, 3]}
-            >
-              <sphereGeometry />
-              <primitive
-                object={
-                  new MeshBasicMaterial({
-                    color: "red",
-                    transparent: true,
-                    opacity: 0.2,
-                  })
-                }
-              />
-            </mesh>
-            <mesh
-              pointerEventsType={{ deny: "grab" }}
-              position={[0, 0, 0]}
-              scale={[0.25, 0.25, 0.25]}
-              ref={leftMeshRef}
-            >
-              <boxGeometry />
-              <primitive
-                object={
-                  new MeshStandardMaterial({
-                    color: "yellow",
-                    metalness: 0,
-                    roughness: 0.2,
-                  })
-                }
-              />
-            </mesh>
-            <mesh
-              pointerEventsType={{ deny: "grab" }}
-              position={[0, 0, 0]}
-              scale={[0.25, 0.25, 0.25]}
-              ref={rightMeshRef}
-            >
-              <boxGeometry />
-              <primitive
-                object={
-                  new MeshStandardMaterial({
-                    color: "cyan",
-                    metalness: 0,
-                    roughness: 0.2,
-                  })
-                }
-              />
-            </mesh>
-            <Locomotion />
+            <Physics gravity={[0, -9.81, 0]}>
+              <directionalLight position={[100, 60, 100]} intensity={15} />
+              <RigidBody type="fixed">
+                <mesh position={[0, -0.5, 0]} scale={[1000, 0.1, 1000]}>
+                  <boxGeometry />
+                  <meshStandardMaterial
+                    color="green"
+                    metalness={0}
+                    roughness={1}
+                  />
+                </mesh>
+              </RigidBody>
+
+              <RigidBody ref={cubeRef} position={[0, 0.5, 0]}>
+                <mesh scale={[0.5, 0.5, 0.5]}>
+                  <boxGeometry />
+                  <meshStandardMaterial
+                    color={red ? "red" : "blue"}
+                    metalness={0}
+                    roughness={0.2}
+                  />
+                </mesh>
+              </RigidBody>
+
+              <mesh ref={leftMeshRef} scale={[0.25, 0.25, 0.25]}>
+                <boxGeometry />
+                <meshStandardMaterial
+                  color="yellow"
+                  metalness={0}
+                  roughness={0.2}
+                />
+              </mesh>
+
+              <mesh ref={rightMeshRef} scale={[0.25, 0.25, 0.25]}>
+                <boxGeometry />
+                <meshStandardMaterial
+                  color="cyan"
+                  metalness={0}
+                  roughness={0.2}
+                />
+              </mesh>
+
+              <RigidBody ref={arrow} position={[5, 1, 0]}>
+                <mesh scale={[0.25, 0.25, 0.25]}>
+                  <sphereGeometry />
+                  <meshStandardMaterial
+                    color="cyan"
+                    metalness={0}
+                    roughness={0.2}
+                  />
+                </mesh>
+              </RigidBody>
+              <Locomotion />
+            </Physics>
           </XR>
           <Sky
-            distance={450000} // 表示距離
-            sunPosition={[100, 60, 100]} // 太陽の位置
-            inclination={0} // 天の赤道の傾き
-            azimuth={0.25} // 方位角
+            distance={450000}
+            sunPosition={[100, 60, 100]}
+            inclination={0}
+            azimuth={0.25}
           />
         </Canvas>
       </Suspense>
