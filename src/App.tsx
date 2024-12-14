@@ -1,16 +1,43 @@
 import { Suspense } from "react";
-import { Canvas } from "@react-three/fiber";
+import { Canvas, useFrame } from "@react-three/fiber";
 import { Sky } from "@react-three/drei";
 import { OrbitControls } from "@react-three/drei";
-import { XR, createXRStore } from "@react-three/xr";
-import { useState } from "react";
+import {
+  XR,
+  createXRStore,
+  useXRInputSourceState,
+  XROrigin,
+} from "@react-three/xr";
+import { useState, useRef } from "react";
 import { MeshBasicMaterial, MeshStandardMaterial } from "three";
+import { Group } from "three";
 
 const store = createXRStore();
 
 function App() {
   const [red, setRed] = useState(false);
   const [isVR, setIsVR] = useState(false);
+
+  const Locomotion = () => {
+    const controller = useXRInputSourceState("controller", "left");
+    const ref = useRef<Group>(null);
+    useFrame((_, _delta) => {
+      if (ref.current == null || controller == null) {
+        return;
+      }
+      const squeezeState = controller.gamepad["xr-standard-squeeze"];
+      if (squeezeState == null) {
+        return;
+      }
+      if (squeezeState.state == "pressed") {
+        setRed(true);
+      } else {
+        setRed(false);
+      }
+      return;
+    });
+    return <XROrigin ref={ref} />;
+  };
 
   return (
     <>
@@ -82,6 +109,7 @@ function App() {
                 }
               />
             </mesh>
+            <Locomotion />
           </XR>
           <Sky
             distance={450000} // 表示距離
