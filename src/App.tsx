@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import { Canvas, useFrame } from "@react-three/fiber";
+import { Canvas } from "@react-three/fiber";
 import { Sky } from "@react-three/drei";
 import { OrbitControls } from "@react-three/drei";
 import { XR, createXRStore } from "@react-three/xr";
