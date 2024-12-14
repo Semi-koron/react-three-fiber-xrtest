@@ -36,8 +36,8 @@ function App() {
         const controllerPos = new Vector3();
         if (controller.object) {
           controller.object.getWorldPosition(controllerPos);
+          setCubePos(controllerPos);
         }
-        setCubePos(controllerPos);
       } else {
         setRed(false);
       }
