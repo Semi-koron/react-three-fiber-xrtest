@@ -20,7 +20,6 @@ function App() {
   const [isVR, setIsVR] = useState(false);
   const leftMeshRef = useRef<Mesh>(null);
   const rightMeshRef = useRef<Mesh>(null);
-  const cubeRef = useRef<any>(null);
   const arrow = useRef<any>(null);
   const Locomotion = () => {
     const leftController = useXRInputSourceState("controller", "left");
@@ -52,7 +51,15 @@ function App() {
         }
         setRightGrab(true);
       } else {
-        if (rightGrab) {
+        if (rightGrab && leftMeshRef.current) {
+          const leftControllerPos = new Vector3();
+          leftController.object?.getWorldPosition(leftControllerPos);
+          const rigidBody = arrow.current;
+          if (rigidBody) {
+            rigidBody.setTranslation(leftControllerPos, true); // 初期位置に戻す
+            rigidBody.setLinvel({ x: 0, y: 0, z: 0 }, true); // 線形速度をリセット
+            rigidBody.setAngvel({ x: 0, y: 0, z: 0 }, true); // 角速度をリセット
+          }
           throwArrow();
           setRightGrab(false);
         }
@@ -62,7 +69,6 @@ function App() {
   };
 
   const throwArrow = () => {
-    addForce();
     if (!leftMeshRef.current || !rightMeshRef.current || !arrow.current) return;
     //leftMeshRefのpositionをに移動
     const leftPos = new Vector3();
@@ -70,14 +76,10 @@ function App() {
     //rightMeshRefのpositionからleftMeshRefのpositionを引いて、normalizeして、それをarrowのvelocityにする
     const velocity = new Vector3();
     velocity.subVectors(
-      rightMeshRef.current.position,
-      leftMeshRef.current.position
+      leftMeshRef.current.position,
+      rightMeshRef.current.position
     );
-  };
-
-  const addForce = () => {
-    console.log("throwArrow");
-    arrow.current.applyImpulse({ x: 1, y: 1, z: 1 });
+    arrow.current.applyImpulse(velocity.multiplyScalar(10), true);
   };
 
   return (
@@ -93,7 +95,6 @@ function App() {
         >
           Enter VR
         </button>
-        <button onClick={addForce}>test</button>
         <Canvas style={{ height: "100vh" }}>
           {!isVR && <OrbitControls />}
           <XR store={store}>
@@ -110,16 +111,14 @@ function App() {
                 </mesh>
               </RigidBody>
 
-              <RigidBody ref={cubeRef} position={[0, 0.5, 0]}>
-                <mesh scale={[0.5, 0.5, 0.5]}>
-                  <boxGeometry />
-                  <meshStandardMaterial
-                    color={red ? "red" : "blue"}
-                    metalness={0}
-                    roughness={0.2}
-                  />
-                </mesh>
-              </RigidBody>
+              <mesh scale={[0.5, 0.5, 0.5]}>
+                <boxGeometry />
+                <meshStandardMaterial
+                  color={red ? "red" : "blue"}
+                  metalness={0}
+                  roughness={0.2}
+                />
+              </mesh>
 
               <mesh ref={leftMeshRef} scale={[0.25, 0.25, 0.25]}>
                 <boxGeometry />
@@ -139,7 +138,7 @@ function App() {
                 />
               </mesh>
 
-              <RigidBody ref={arrow} position={[5, 1, 0]}>
+              <RigidBody ref={arrow}>
                 <mesh scale={[0.25, 0.25, 0.25]}>
                   <sphereGeometry />
                   <meshStandardMaterial
