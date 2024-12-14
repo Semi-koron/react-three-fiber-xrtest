@@ -9,13 +9,14 @@ import {
   XROrigin,
 } from "@react-three/xr";
 import { useState, useRef } from "react";
-import { MeshBasicMaterial, MeshStandardMaterial } from "three";
+import { MeshBasicMaterial, MeshStandardMaterial, Vector3 } from "three";
 import { Group } from "three";
 
 const store = createXRStore();
 
 function App() {
   const [red, setRed] = useState(false);
+  const [cubePos, setCubePos] = useState<Vector3>(new Vector3(0, 0.5, 0));
   const [isVR, setIsVR] = useState(false);
 
   const Locomotion = () => {
@@ -31,6 +32,7 @@ function App() {
       }
       if (squeezeState.state == "pressed") {
         setRed(true);
+        setCubePos(ref.current.position);
       } else {
         setRed(false);
       }
@@ -105,6 +107,22 @@ function App() {
                     color: "red",
                     transparent: true,
                     opacity: 0.2,
+                  })
+                }
+              />
+            </mesh>
+            <mesh
+              pointerEventsType={{ deny: "grab" }}
+              position={cubePos}
+              scale={[0.25, 0.25, 0.25]}
+            >
+              <boxGeometry />
+              <primitive
+                object={
+                  new MeshStandardMaterial({
+                    color: "yellow",
+                    metalness: 0,
+                    roughness: 0.2,
                   })
                 }
               />
